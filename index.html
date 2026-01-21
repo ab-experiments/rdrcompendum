@@ -768,22 +768,39 @@
             document.getElementById('password-error').style.display = 'none';
         }
 
-        function tryUnlock() {
+        async function tryUnlock() {
             const input = document.getElementById('password-input').value;
-            // Try to decode - if password is wrong, the decoded key won't work
-            const decodedKey = decodeKey(ENCODED_KEY, input);
-            // Check if it looks like a valid GitHub token
-            if (decodedKey.startsWith('ghp_')) {
-                API_KEY = decodedKey;
-                localStorage.setItem('rdr2-app-key', input);
-                setUnlocked();
-                hidePasswordModal();
-                pullFromGist();
-            } else {
+            if (!input) return;
+
+            // Decode with entered password
+            API_KEY = decodeKey(ENCODED_KEY, input);
+
+            // Try to fetch from Gist to verify the key works
+            document.getElementById('btn-unlock').textContent = 'Checking...';
+            document.getElementById('btn-unlock').disabled = true;
+
+            try {
+                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    headers: { 'Authorization': `token ${API_KEY}` }
+                });
+
+                if (response.ok) {
+                    localStorage.setItem('rdr2-app-key', input);
+                    setUnlocked();
+                    hidePasswordModal();
+                    pullFromGist();
+                } else {
+                    throw new Error('Invalid');
+                }
+            } catch (err) {
                 document.getElementById('password-error').style.display = 'block';
                 document.getElementById('password-input').value = '';
                 document.getElementById('password-input').focus();
+                API_KEY = null;
             }
+
+            document.getElementById('btn-unlock').textContent = 'Unlock';
+            document.getElementById('btn-unlock').disabled = false;
         }
 
         document.getElementById('btn-unlock').addEventListener('click', tryUnlock);
