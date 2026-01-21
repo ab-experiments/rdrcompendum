@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RDR2 Animals">
+    <meta name="theme-color" content="#1a1a2e">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>RDR2 Animals Compendium</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #d4a574;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .stats {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #888;
+        }
+
+        .stats span {
+            margin: 0 10px;
+        }
+
+        .stats .completed {
+            color: #4ade80;
+        }
+
+        .sync-status {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .sync-status.syncing {
+            color: #f0ad4e;
+        }
+
+        .sync-status.error {
+            color: #e74c3c;
+        }
+
+        .sync-status.success {
+            color: #4ade80;
+        }
+
+        .search-container {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 15px 0;
+            z-index: 100;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #3a3a5a;
+            border-radius: 10px;
+            background: #252545;
+            color: #e0e0e0;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box:focus {
+            border-color: #d4a574;
+        }
+
+        .search-box::placeholder {
+            color: #666;
+        }
+
+        .category {
+            margin-bottom: 30px;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, #2a2a4a 0%, transparent 100%);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .category-header:hover {
+            background: linear-gradient(90deg, #3a3a5a 0%, transparent 100%);
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #d4a574;
+        }
+
+        .category-count {
+            font-size: 14px;
+            color: #888;
+        }
+
+        .category-count .done {
+            color: #4ade80;
+        }
+
+        .animal-list {
+            display: grid;
+            gap: 5px;
+        }
+
+        .animal-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            background: #252545;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .animal-item:hover {
+            background: #2d2d55;
+        }
+
+        .animal-item:active {
+            transform: scale(0.98);
+        }
+
+        .animal-item.checked {
+            background: #1a3a2a;
+        }
+
+        .animal-item.checked .animal-name {
+            text-decoration: line-through;
+            color: #4ade80;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #555;
+            border-radius: 4px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .animal-item.checked .checkbox {
+            background: #4ade80;
+            border-color: #4ade80;
+        }
+
+        .checkbox::after {
+            content: '';
+            display: none;
+            width: 6px;
+            height: 12px;
+            border: solid #1a3a2a;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+            margin-bottom: 3px;
+        }
+
+        .animal-item.checked .checkbox::after {
+            display: block;
+        }
+
+        .animal-name {
+            flex-grow: 1;
+            font-size: 15px;
+        }
+
+        .animal-progress {
+            font-size: 12px;
+            color: #888;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .animal-item.checked .animal-progress {
+            color: #4ade80;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+
+        .collapse-icon {
+            transition: transform 0.3s;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .category.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+
+        .category.collapsed .animal-list {
+            display: none;
+        }
+
+        .sync-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #252545;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            border-top: 1px solid #3a3a5a;
+            z-index: 200;
+        }
+
+        .sync-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sync-btn:active {
+            transform: scale(0.95);
+        }
+
+        .sync-btn.primary {
+            background: #d4a574;
+            color: #1a1a2e;
+        }
+
+        .sync-btn.secondary {
+            background: #3a3a5a;
+            color: #e0e0e0;
+        }
+
+        .sync-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #252545;
+            padding: 25px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .modal-title {
+            color: #d4a574;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #3a3a5a;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-buttons .sync-btn {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RDR2 Animals Compendium</h1>
+        <div class="stats">
+            <span>Total: <span id="total-count">0</span></span>
+            <span class="completed">Completed: <span id="completed-count">0</span></span>
+        </div>
+        <div class="sync-status" id="sync-status">Last sync: never</div>
+
+        <div class="search-container">
+            <input type="text" class="search-box" placeholder="Search animals..." id="search-input">
+        </div>
+
+        <div id="categories-container"></div>
+        <div class="no-results hidden" id="no-results">No animals found</div>
+    </div>
+
+    <div class="sync-bar">
+        <button class="sync-btn secondary" id="btn-pull">Pull from Cloud</button>
+        <button class="sync-btn primary" id="btn-push">Push to Cloud</button>
+    </div>
+
+    <div class="modal" id="token-modal">
+        <div class="modal-content">
+            <div class="modal-title">Enter GitHub Token</div>
+            <input type="password" class="modal-input" id="token-input" placeholder="ghp_xxxxxxxxxxxx">
+            <div class="modal-buttons">
+                <button class="sync-btn secondary" id="btn-cancel">Cancel</button>
+                <button class="sync-btn primary" id="btn-save-token">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Gist configuration
+        const GIST_ID = 'adfe3b1f3678439f8a1e6fc307388735';
+        const GIST_FILENAME = 'rdr2-animals-state.json';
+
+        const animalsData = {
+            "ЖИВОТНОЕ": [
+                { name: "Alpine Goat", progress: 100 },
+                { name: "American Badger", progress: 100 },
+                { name: "American Bison", progress: 100 },
+                { name: "American Black Bear", progress: 0 },
+                { name: "American Domestic Cat", progress: 0 },
+                { name: "American Fox Hound", progress: 0 },
+                { name: "American Gray Fox", progress: 0 },
+                { name: "American Muskrat", progress: 100 },
+                { name: "American Pronghorn Buck", progress: 100 },
+                { name: "American Pronghorn Doe", progress: 100 },
+                { name: "American Red Fox", progress: 100 },
+                { name: "American Red Squirrel", progress: 50 },
+                { name: "Angus Bull", progress: 0 },
+                { name: "Angus Ox", progress: 0 },
+                { name: "Australian Shepherd", progress: 100 },
+                { name: "Baja California Pronghorn Buck", progress: 0 },
+                { name: "Baja California Pronghorn Doe", progress: 0 },
+                { name: "Berkshire Pig", progress: 0 },
+                { name: "Big China Pig", progress: 0 },
+                { name: "Black Rat", progress: 0 },
+                { name: "Black Squirrel", progress: 100 },
+                { name: "Black-tailed Jackrabbit", progress: 100 },
+                { name: "Bloodhound", progress: 0 },
+                { name: "Bluetick Coonhound", progress: 0 },
+                { name: "Border Collie", progress: 100 },
+                { name: "Brown Rat", progress: 0 },
+                { name: "California Valley Coyote", progress: 100 },
+                { name: "Catahoula Cur", progress: 0 },
+                { name: "Chesapeake Bay Retriever", progress: 0 },
+                { name: "Collared Peccary", progress: 0 },
+                { name: "Cougar", progress: 0 },
+                { name: "Desert Bighorn Ram", progress: 0 },
+                { name: "Desert Bighorn Sheep", progress: 0 },
+                { name: "Devon Bull", progress: 0 },
+                { name: "Devon Ox", progress: 100 },
+                { name: "Dominique Chicken", progress: 100 },
+                { name: "Dominique Rooster", progress: 0 },
+                { name: "Florida Cracker Cow", progress: 100 },
+                { name: "Florida Panther", progress: 0 },
+                { name: "Gray Wolf", progress: 75 },
+                { name: "Grizzly Bear", progress: 0 },
+                { name: "Hereford Bull", progress: 0 },
+                { name: "Java Chicken", progress: 100 },
+                { name: "Java Rooster", progress: 0 },
+                { name: "Labrador Retriever", progress: 100 },
+                { name: "Leghorn Chicken", progress: 100 },
+                { name: "Leghorn Rooster", progress: 0 },
+                { name: "Little Brown Rat", progress: 0 },
+                { name: "Merino Sheep", progress: 100 },
+                { name: "Mule", progress: 0 },
+                { name: "Mutt", progress: 0 },
+                { name: "Nine-banded Armadillo", progress: 0 },
+                { name: "North American Beaver", progress: 100 },
+                { name: "North American Raccoon", progress: 100 },
+                { name: "Old Spot Pig", progress: 0 },
+                { name: "Panther", progress: 0 },
+                { name: "Poodle", progress: 0 },
+                { name: "Rocky Mountain Bighorn Ram", progress: 50 },
+                { name: "Rocky Mountain Bighorn Sheep", progress: 100 },
+                { name: "Rocky Mountain Bull Elk", progress: 100 },
+                { name: "Rocky Mountain Cow Elk", progress: 100 },
+                { name: "Rufus", progress: 0 },
+                { name: "Siberian Husky", progress: 0 },
+                { name: "Sierra Nevada Bighorn Ram", progress: 0 },
+                { name: "Sierra Nevada Bighorn Sheep", progress: 50 },
+                { name: "Silver Fox", progress: 100 },
+                { name: "Sonoran Pronghorn Buck", progress: 0 },
+                { name: "Sonoran Pronghorn Doe", progress: 0 },
+                { name: "Standard Donkey", progress: 0 },
+                { name: "Striped Skunk", progress: 100 },
+                { name: "Timber Wolf", progress: 100 },
+                { name: "Virginia Opossum", progress: 50 },
+                { name: "Western Bull Moose", progress: 0 },
+                { name: "Western Chipmunk", progress: 0 },
+                { name: "Western Gray Squirrel", progress: 50 },
+                { name: "Western Moose", progress: 0 },
+                { name: "Whitetail Buck", progress: 100 },
+                { name: "Whitetail Deer", progress: 100 },
+                { name: "Wild Boar", progress: 100 }
+            ],
+            "РЕПТИЛИЯ": [
+                { name: "Alligator Snapping Turtle", progress: 100 },
+                { name: "American Alligator", progress: 100 },
+                { name: "American Alligator (Small)", progress: 0 },
+                { name: "American Bullfrog", progress: 0 },
+                { name: "Banded Gila Monster", progress: 0 },
+                { name: "Black-tailed Rattlesnake", progress: 0 },
+                { name: "Cottonmouth Snake", progress: 100 },
+                { name: "Cuban Land Crab", progress: 0 },
+                { name: "Desert Iguana", progress: 0 },
+                { name: "Diamondback Rattlesnake", progress: 100 },
+                { name: "Fer-de-Lance Snake", progress: 0 },
+                { name: "Green Iguana", progress: 0 },
+                { name: "Midland Water Snake", progress: 75 },
+                { name: "Northern Copperhead Snake", progress: 0 },
+                { name: "Northern Water Snake", progress: 100 },
+                { name: "Rainbow Boa Snake", progress: 0 },
+                { name: "Red Boa Snake", progress: 0 },
+                { name: "Red Swamp Crayfish", progress: 0 },
+                { name: "Sonoran Desert Toad", progress: 0 },
+                { name: "Southern Copperhead Snake", progress: 0 },
+                { name: "Sunglow Boa Snake", progress: 0 },
+                { name: "Timber Rattlesnake", progress: 75 },
+                { name: "Western Toad", progress: 100 }
+            ],
+            "ПТИЦА": [
+                { name: "American Crow", progress: 100 },
+                { name: "American Robin", progress: 0 },
+                { name: "American Tree Sparrow", progress: 66 },
+                { name: "American White Pelican", progress: 100 },
+                { name: "Bald Eagle", progress: 0 },
+                { name: "Baltimore Oriole", progress: 0 },
+                { name: "Band-tailed Pigeon", progress: 0 },
+                { name: "Blue and Yellow Macaw", progress: 0 },
+                { name: "Blue Jay", progress: 100 },
+                { name: "Brown Pelican", progress: 33 },
+                { name: "California Condor", progress: 0 },
+                { name: "California Horned Owl", progress: 0 },
+                { name: "California Quail", progress: 66 },
+                { name: "Canada Goose", progress: 66 },
+                { name: "Carolina Parakeet", progress: 0 },
+                { name: "Cedar Waxwing", progress: 33 },
+                { name: "Chinese Ring-Necked Pheasant", progress: 0 },
+                { name: "Coastal Horned Owl", progress: 0 },
+                { name: "Common Loon", progress: 0 },
+                { name: "Double-crested Cormorant", progress: 33 },
+                { name: "Eastern Turkey Vulture", progress: 0 },
+                { name: "Eastern Wild Turkey", progress: 100 },
+                { name: "Eurasian Tree Sparrow", progress: 0 },
+                { name: "Ferruginous Hawk", progress: 0 },
+                { name: "Golden Crowned Sparrow", progress: 100 },
+                { name: "Golden Eagle", progress: 33 },
+                { name: "Great Blue Heron", progress: 100 },
+                { name: "Great Green Macaw", progress: 0 },
+                { name: "Great Horned Owl", progress: 0 },
+                { name: "Greater Prairie Chicken", progress: 100 },
+                { name: "Herring Gull", progress: 66 },
+                { name: "Hooded Oriole", progress: 0 },
+                { name: "Laughing Gull", progress: 100 },
+                { name: "Little Egret", progress: 0 },
+                { name: "Mallard Duck", progress: 100 },
+                { name: "Neotropic Cormorant", progress: 0 },
+                { name: "Northern Cardinal", progress: 100 },
+                { name: "Pacific Loon", progress: 100 },
+                { name: "Pekin Duck", progress: 100 },
+                { name: "Pileated Woodpecker", progress: 0 },
+                { name: "Red-bellied Woodpecker", progress: 0 },
+                { name: "Red-footed Booby", progress: 0 },
+                { name: "Red-tailed Hawk", progress: 100 },
+                { name: "Reddish Egret", progress: 0 },
+                { name: "Ring-billed Gull", progress: 100 },
+                { name: "Ring-necked Pheasant", progress: 66 },
+                { name: "Rio Grande Wild Turkey", progress: 0 },
+                { name: "Rock Pigeon", progress: 0 },
+                { name: "Roseate Spoonbill", progress: 0 },
+                { name: "Rough-legged Hawk", progress: 0 },
+                { name: "Sandhill Crane", progress: 0 },
+                { name: "Scarlet Macaw", progress: 0 },
+                { name: "Scarlet Tanager Songbird", progress: 100 },
+                { name: "Snowy Egret", progress: 0 },
+                { name: "Tricolored Heron", progress: 0 },
+                { name: "Western Raven", progress: 100 },
+                { name: "Western Tanager Songbird", progress: 100 },
+                { name: "Western Turkey Vulture", progress: 100 },
+                { name: "Whooping Crane", progress: 0 },
+                { name: "Yellow-billed Loon", progress: 100 }
+            ],
+            "ЛЕГЕНДАРНОЕ": [
+                { name: "Legendary Beaver", progress: 100 },
+                { name: "Legendary Bharati Grizzly Bear", progress: 100 },
+                { name: "Legendary Big Horn Ram", progress: 0 },
+                { name: "Legendary Boar", progress: 0 },
+                { name: "Legendary Buck", progress: 0 },
+                { name: "Legendary Bull Gator", progress: 0 },
+                { name: "Legendary Cougar", progress: 0 },
+                { name: "Legendary Coyote", progress: 0 },
+                { name: "Legendary Elk", progress: 0 },
+                { name: "Legendary Fox", progress: 0 },
+                { name: "Legendary Jaguar", progress: 0 },
+                { name: "Legendary Moose", progress: 0 },
+                { name: "Legendary Pronghorn", progress: 0 },
+                { name: "Legendary Tatanka Bison", progress: 0 },
+                { name: "Legendary White Bison", progress: 0 },
+                { name: "Legendary Wolf", progress: 100 }
+            ]
+        };
+
+        // Token management
+        function getToken() {
+            return localStorage.getItem('rdr2-github-token');
+        }
+
+        function setToken(token) {
+            localStorage.setItem('rdr2-github-token', token);
+        }
+
+        // Load checked state from localStorage
+        function loadCheckedState() {
+            const saved = localStorage.getItem('rdr2-animals-checked');
+            return saved ? JSON.parse(saved) : {};
+        }
+
+        // Save checked state to localStorage
+        function saveCheckedState(state) {
+            localStorage.setItem('rdr2-animals-checked', JSON.stringify(state));
+        }
+
+        // Get last sync time
+        function getLastSync() {
+            return localStorage.getItem('rdr2-last-sync');
+        }
+
+        function setLastSync() {
+            const now = new Date().toLocaleString('ru-RU');
+            localStorage.setItem('rdr2-last-sync', now);
+            updateSyncStatus();
+        }
+
+        let checkedState = loadCheckedState();
+
+        // Initialize checked state from progress data
+        function initializeCheckedState() {
+            for (const category in animalsData) {
+                animalsData[category].forEach(animal => {
+                    const key = `${category}-${animal.name}`;
+                    if (checkedState[key] === undefined && animal.progress === 100) {
+                        checkedState[key] = true;
+                    }
+                });
+            }
+            saveCheckedState(checkedState);
+        }
+
+        initializeCheckedState();
+
+        // Sync status
+        function updateSyncStatus(message, type) {
+            const el = document.getElementById('sync-status');
+            if (message) {
+                el.textContent = message;
+                el.className = 'sync-status ' + (type || '');
+            } else {
+                const lastSync = getLastSync();
+                el.textContent = lastSync ? `Last sync: ${lastSync}` : 'Last sync: never';
+                el.className = 'sync-status';
+            }
+        }
+
+        // Gist API functions
+        async function pullFromGist() {
+            updateSyncStatus('Pulling...', 'syncing');
+            try {
+                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+                if (!response.ok) throw new Error('Failed to fetch gist');
+
+                const gist = await response.json();
+                const content = gist.files[GIST_FILENAME]?.content;
+
+                if (content) {
+                    const remoteState = JSON.parse(content);
+                    checkedState = remoteState;
+                    saveCheckedState(checkedState);
+                    render();
+                    setLastSync();
+                    updateSyncStatus('Pulled successfully!', 'success');
+                    setTimeout(() => updateSyncStatus(), 2000);
+                } else {
+                    updateSyncStatus('No data in cloud', 'error');
+                    setTimeout(() => updateSyncStatus(), 2000);
+                }
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus('Pull failed: ' + err.message, 'error');
+                setTimeout(() => updateSyncStatus(), 3000);
+            }
+        }
+
+        async function pushToGist() {
+            const token = getToken();
+            if (!token) {
+                showTokenModal();
+                return;
+            }
+
+            updateSyncStatus('Pushing...', 'syncing');
+            try {
+                const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            [GIST_FILENAME]: {
+                                content: JSON.stringify(checkedState, null, 2)
+                            }
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        localStorage.removeItem('rdr2-github-token');
+                        throw new Error('Invalid token');
+                    }
+                    throw new Error('Failed to update gist');
+                }
+
+                setLastSync();
+                updateSyncStatus('Pushed successfully!', 'success');
+                setTimeout(() => updateSyncStatus(), 2000);
+            } catch (err) {
+                console.error(err);
+                updateSyncStatus('Push failed: ' + err.message, 'error');
+                setTimeout(() => updateSyncStatus(), 3000);
+            }
+        }
+
+        // Token modal
+        function showTokenModal() {
+            document.getElementById('token-modal').classList.add('active');
+            document.getElementById('token-input').focus();
+        }
+
+        function hideTokenModal() {
+            document.getElementById('token-modal').classList.remove('active');
+            document.getElementById('token-input').value = '';
+        }
+
+        document.getElementById('btn-cancel').addEventListener('click', hideTokenModal);
+        document.getElementById('btn-save-token').addEventListener('click', () => {
+            const token = document.getElementById('token-input').value.trim();
+            if (token) {
+                setToken(token);
+                hideTokenModal();
+                pushToGist();
+            }
+        });
+
+        // Sync buttons
+        document.getElementById('btn-pull').addEventListener('click', pullFromGist);
+        document.getElementById('btn-push').addEventListener('click', pushToGist);
+
+        // Render categories and animals
+        function render() {
+            const container = document.getElementById('categories-container');
+            container.innerHTML = '';
+
+            for (const category in animalsData) {
+                const categoryDiv = document.createElement('div');
+                categoryDiv.className = 'category';
+
+                const completedInCategory = animalsData[category].filter(a => {
+                    const key = `${category}-${a.name}`;
+                    return checkedState[key];
+                }).length;
+
+                categoryDiv.innerHTML = `
+                    <div class="category-header">
+                        <span class="category-title">${category} <span class="collapse-icon">▼</span></span>
+                        <span class="category-count"><span class="done">${completedInCategory}</span> / ${animalsData[category].length}</span>
+                    </div>
+                    <div class="animal-list"></div>
+                `;
+
+                const header = categoryDiv.querySelector('.category-header');
+                header.addEventListener('click', () => {
+                    categoryDiv.classList.toggle('collapsed');
+                });
+
+                const list = categoryDiv.querySelector('.animal-list');
+
+                animalsData[category].forEach(animal => {
+                    const key = `${category}-${animal.name}`;
+                    const isChecked = checkedState[key] || false;
+
+                    const item = document.createElement('div');
+                    item.className = `animal-item ${isChecked ? 'checked' : ''}`;
+                    item.dataset.name = animal.name.toLowerCase();
+                    item.dataset.key = key;
+
+                    item.innerHTML = `
+                        <div class="checkbox"></div>
+                        <span class="animal-name">${animal.name}</span>
+                        <span class="animal-progress">${animal.progress}%</span>
+                    `;
+
+                    item.addEventListener('click', () => {
+                        checkedState[key] = !checkedState[key];
+                        saveCheckedState(checkedState);
+                        item.classList.toggle('checked');
+                        updateStats();
+                        updateCategoryCount(categoryDiv, category);
+                    });
+
+                    list.appendChild(item);
+                });
+
+                container.appendChild(categoryDiv);
+            }
+
+            updateStats();
+        }
+
+        function updateCategoryCount(categoryDiv, category) {
+            const completedInCategory = animalsData[category].filter(a => {
+                const key = `${category}-${a.name}`;
+                return checkedState[key];
+            }).length;
+
+            const countSpan = categoryDiv.querySelector('.category-count');
+            countSpan.innerHTML = `<span class="done">${completedInCategory}</span> / ${animalsData[category].length}`;
+        }
+
+        function updateStats() {
+            let total = 0;
+            let completed = 0;
+
+            for (const category in animalsData) {
+                animalsData[category].forEach(animal => {
+                    total++;
+                    const key = `${category}-${animal.name}`;
+                    if (checkedState[key]) completed++;
+                });
+            }
+
+            document.getElementById('total-count').textContent = total;
+            document.getElementById('completed-count').textContent = completed;
+        }
+
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            const categories = document.querySelectorAll('.category');
+            let anyVisible = false;
+
+            categories.forEach(category => {
+                const items = category.querySelectorAll('.animal-item');
+                let categoryHasVisible = false;
+
+                items.forEach(item => {
+                    const name = item.dataset.name;
+                    const matches = name.includes(query);
+                    item.classList.toggle('hidden', !matches);
+                    if (matches) {
+                        categoryHasVisible = true;
+                        anyVisible = true;
+                    }
+                });
+
+                category.classList.toggle('hidden', !categoryHasVisible);
+
+                if (categoryHasVisible && query) {
+                    category.classList.remove('collapsed');
+                }
+            });
+
+            document.getElementById('no-results').classList.toggle('hidden', anyVisible);
+        });
+
+        // Initial render
+        render();
+        updateSyncStatus();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('SW registered'))
+                .catch(err => console.log('SW registration failed', err));
+        }
+    </script>
+</body>
+</html>
