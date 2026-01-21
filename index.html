@@ -311,6 +311,69 @@
             background: #3a3a5a;
             color: #e0e0e0;
         }
+
+        /* iOS Install Banner */
+        .install-banner {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #252545;
+            padding: 20px;
+            border-top: 1px solid #3a3a5a;
+            z-index: 250;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .install-banner.active {
+            display: block;
+        }
+
+        .install-banner-content {
+            max-width: 400px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .install-banner-title {
+            color: #d4a574;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .install-steps {
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .install-steps .step {
+            margin-bottom: 8px;
+        }
+
+        .install-steps .icon {
+            display: inline-block;
+            font-size: 18px;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+
+        .install-banner-close {
+            background: #3a3a5a;
+            color: #e0e0e0;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -328,6 +391,19 @@
 
         <div id="categories-container"></div>
         <div class="no-results hidden" id="no-results">No animals found</div>
+    </div>
+
+    <!-- iOS Install Banner -->
+    <div class="install-banner" id="install-banner">
+        <div class="install-banner-content">
+            <div class="install-banner-title">Install as App</div>
+            <div class="install-steps">
+                <div class="step">1. Tap <span class="icon">&#x1F4E4;</span> Share button below</div>
+                <div class="step">2. Scroll down and tap "Add to Home Screen"</div>
+                <div class="step">3. Tap "Add" in the top right</div>
+            </div>
+            <button class="install-banner-close" id="install-banner-close">Got it</button>
+        </div>
     </div>
 
     <div class="modal" id="token-modal">
@@ -845,6 +921,30 @@
                 .then(reg => console.log('SW registered'))
                 .catch(err => console.log('SW registration failed', err));
         }
+
+        // iOS Install Banner
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent);
+        }
+
+        function isInStandaloneMode() {
+            return window.navigator.standalone === true;
+        }
+
+        function showInstallBanner() {
+            const dismissed = localStorage.getItem('rdr2-install-dismissed');
+            if (isIOS() && !isInStandaloneMode() && !dismissed) {
+                document.getElementById('install-banner').classList.add('active');
+            }
+        }
+
+        document.getElementById('install-banner-close').addEventListener('click', () => {
+            document.getElementById('install-banner').classList.remove('active');
+            localStorage.setItem('rdr2-install-dismissed', 'true');
+        });
+
+        // Show install banner after a short delay
+        setTimeout(showInstallBanner, 1500);
     </script>
 </body>
 </html>
