@@ -406,21 +406,32 @@
         </div>
     </div>
 
-    <div class="modal" id="token-modal">
+    <div class="modal" id="password-modal">
         <div class="modal-content">
-            <div class="modal-title">Enter GitHub Token (one time only)</div>
-            <input type="text" class="modal-input" id="token-input" placeholder="ghp_xxxxxxxxxxxx">
-            <div class="modal-buttons">
-                <button class="modal-btn secondary" id="btn-cancel">Cancel</button>
-                <button class="modal-btn primary" id="btn-save-token">Save</button>
-            </div>
+            <div class="modal-title">Enter Password</div>
+            <input type="password" class="modal-input" id="password-input" placeholder="Password">
+            <div id="password-error" style="color: #e74c3c; font-size: 12px; margin-bottom: 10px; display: none;">Wrong password</div>
+            <button class="modal-btn primary" id="btn-unlock" style="width: 100%;">Unlock</button>
         </div>
     </div>
 
     <script>
-        // Gist configuration
+        // Configuration
         const GIST_ID = 'adfe3b1f3678439f8a1e6fc307388735';
         const GIST_FILENAME = 'rdr2-animals-state.json';
+        const ENCODED_KEY = 'FREDPhIpPhNEMjgyMgNDLhQWJAkJEiYXFDsmFQE6S1EGSEEjHT80Fg==';
+
+        // Decode function
+        function decodeKey(encoded, password) {
+            const decoded = atob(encoded);
+            let result = '';
+            for (let i = 0; i < decoded.length; i++) {
+                result += String.fromCharCode(decoded.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+            }
+            return result;
+        }
+
+        let API_KEY = null;
 
         const animalsData = {
             "ЖИВОТНОЕ": [
@@ -611,13 +622,13 @@
             ]
         };
 
-        // Token management
-        function getToken() {
-            return localStorage.getItem('rdr2-github-token');
+        // Auth management
+        function isUnlocked() {
+            return localStorage.getItem('rdr2-unlocked') === 'true';
         }
 
-        function setToken(token) {
-            localStorage.setItem('rdr2-github-token', token);
+        function setUnlocked() {
+            localStorage.setItem('rdr2-unlocked', 'true');
         }
 
         // Load checked state from localStorage
@@ -702,22 +713,16 @@
         }
 
         let syncTimeout = null;
-        let pendingAction = null;
 
         async function pushToGist() {
-            const token = getToken();
-            if (!token) {
-                pendingAction = 'push';
-                showTokenModal();
-                return;
-            }
+            if (!isUnlocked()) return;
 
             updateSyncStatus('Syncing...', 'syncing');
             try {
                 const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                     method: 'PATCH',
                     headers: {
-                        'Authorization': `token ${token}`,
+                        'Authorization': `token ${API_KEY}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -730,10 +735,6 @@
                 });
 
                 if (!response.ok) {
-                    if (response.status === 401) {
-                        localStorage.removeItem('rdr2-github-token');
-                        throw new Error('Invalid token');
-                    }
                     throw new Error('Failed to sync');
                 }
 
@@ -755,33 +756,39 @@
             }, 500);
         }
 
-        // Token modal
-        function showTokenModal() {
-            document.getElementById('token-modal').classList.add('active');
-            document.getElementById('token-input').focus();
+        // Password modal
+        function showPasswordModal() {
+            document.getElementById('password-modal').classList.add('active');
+            document.getElementById('password-input').focus();
         }
 
-        function hideTokenModal() {
-            document.getElementById('token-modal').classList.remove('active');
-            document.getElementById('token-input').value = '';
+        function hidePasswordModal() {
+            document.getElementById('password-modal').classList.remove('active');
+            document.getElementById('password-input').value = '';
+            document.getElementById('password-error').style.display = 'none';
         }
 
-        document.getElementById('btn-cancel').addEventListener('click', () => {
-            hideTokenModal();
-            pendingAction = null;
-        });
-        document.getElementById('btn-save-token').addEventListener('click', () => {
-            const token = document.getElementById('token-input').value.trim();
-            if (token) {
-                setToken(token);
-                hideTokenModal();
-                if (pendingAction === 'push') {
-                    pushToGist();
-                } else if (pendingAction === 'pull') {
-                    pullFromGist();
-                }
-                pendingAction = null;
+        function tryUnlock() {
+            const input = document.getElementById('password-input').value;
+            // Try to decode - if password is wrong, the decoded key won't work
+            const decodedKey = decodeKey(ENCODED_KEY, input);
+            // Check if it looks like a valid GitHub token
+            if (decodedKey.startsWith('ghp_')) {
+                API_KEY = decodedKey;
+                localStorage.setItem('rdr2-app-key', input);
+                setUnlocked();
+                hidePasswordModal();
+                pullFromGist();
+            } else {
+                document.getElementById('password-error').style.display = 'block';
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
             }
+        }
+
+        document.getElementById('btn-unlock').addEventListener('click', tryUnlock);
+        document.getElementById('password-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') tryUnlock();
         });
 
         // Render categories and animals
@@ -906,13 +913,17 @@
         render();
         updateSyncStatus();
 
-        // Pull from cloud on first load if token exists
-        if (getToken()) {
-            pullFromGist();
-        } else if (!getLastSync()) {
-            // First time - ask for token
-            pendingAction = 'pull';
-            showTokenModal();
+        // Check if unlocked
+        if (isUnlocked()) {
+            const savedPassword = localStorage.getItem('rdr2-app-key');
+            if (savedPassword) {
+                API_KEY = decodeKey(ENCODED_KEY, savedPassword);
+                pullFromGist();
+            } else {
+                showPasswordModal();
+            }
+        } else {
+            showPasswordModal();
         }
 
         // Register service worker
